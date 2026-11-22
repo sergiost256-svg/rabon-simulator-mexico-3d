@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rabón Simulator México 3D</title>
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #87ceeb;
+  font-family: Arial;
+}
+canvas { display:block; }
+#controles {
+  position:fixed;
+  bottom:20px;
+  width:100%;
+  display:flex;
+  justify-content:space-around;
+}
+button {
+  background:#222;
+  color:white;
+  border:2px solid white;
+  border-radius:15px;
+  padding:18px;
+  font-size:18px;
+}
+</style>
+</head>
+<body>
+<div id="controles">
+<button id="izq">⬅️</button>
+<button id="gas">ACELERAR</button>
+<button id="freno">FRENAR</button>
+<button id="der">➡️</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.Fog(0x87ceeb, 30, 150);
+
+const camera = new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,500);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x555555,2));
+const sun = new THREE.DirectionalLight(0xffffff,2);
+sun.position.set(10,20,10);
+scene.add(sun);
+
+const ground = new THREE.Mesh(
+new THREE.PlaneGeometry(300,300),
+new THREE.MeshLambertMaterial({color:0x448844}));
+ground.rotation.x=-Math.PI/2;
+scene.add(ground);
+
+const road = new THREE.Mesh(
+new THREE.PlaneGeometry(12,300),
+new THREE.MeshLambertMaterial({color:0x333333}));
+road.rotation.x=-Math.PI/2;
+road.position.y=.02;
+scene.add(road);
+
+for(let z=-140;z<150;z+=12){
+const line=new THREE.Mesh(
+new THREE.BoxGeometry(.25,.03,5),
+new THREE.MeshBasicMaterial({color:0xffffff}));
+line.position.set(0,.05,z);
+scene.add(line);
+}
+
+const truck = new THREE.Group();
+scene.add(truck);
+
+function box(w,h,d,color,x,y,z){
+const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+new THREE.MeshStandardMaterial({color}));
+m.position.set(x,y,z);
+truck.add(m);
+}
+
+box(2.5,1.2,4,0x1555bb,0,1.8,0);
+box(2.3,2,2,0xffffff,0,2.7,1.3);
+box(2.35,.15,2,0x1555bb,0,3.75,1.3);
+
+for(let x of [-1.25,1.25]){
+for(let z of [-1.25,1.3]){
+const wheel=new THREE.Mesh(
+new THREE.CylinderGeometry(.48,.48,.3,24),
+new THREE.MeshStandardMaterial({color:0x111111}));
+wheel.rotation.z=Math.PI/2;
+wheel.position.set(x,.65,z);
+truck.add(wheel);
+}
+}
+
+camera.position.set(0,5,9);
+camera.lookAt(0,1.5,0);
+
+let speed=0;
+let steer=0;
+let keys={};
+
+function control(id,key){
+const b=document.getElementById(id);
+b.ontouchstart=e=>{e.preventDefault();keys[key]=true};
+b.ontouchend=()=>keys[key]=false;
+b.onmousedown=()=>keys[key]=true;
+b.onmouseup=()=>keys[key]=false;
+b.onmouseleave=()=>keys[key]=false;
+}
+control("gas","gas");
+control("freno","freno");
+control("izq","left");
+control("der","right");
+
+function animate(){
+requestAnimationFrame(animate);
+if(keys.gas)speed=Math.min(speed+.003,.22);
+else speed*=.99;
+if(keys.freno)speed*=.94;
+if(keys.left)steer=Math.min(steer+.025,.5);
+else if(keys.right)steer=Math.max(steer-.025,-.5);
+else steer*=.9;
+truck.position.z-=speed;
+truck.position.x+=steer*speed*2;
+camera.position.x=truck.position.x;
+camera.position.z=truck.position.z+9;
+camera.lookAt(truck.position.x,1.5,truck.position.z);
+renderer.render(scene,camera);
+}
+animate();
+
+window.onresize=()=>{
+camera.aspect=innerWidth/innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(innerWidth,innerHeight);
+};
+</script>
+</body>
+</html>
